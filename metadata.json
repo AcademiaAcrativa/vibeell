@@ -1,0 +1,6 @@
+{
+  "name": "VIBEELL - Campainha Vibratória para Pessoas com Deficiência Auditiva",
+  "description": "Projeto de tecnologia assistiva desenvolvido por estudantes da Turma 1121 da ETERJ para a XL FECIP. Transforma o sinal de campainha em vibrações com ESP32 SuperMini e protocolo ESP-NOW.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
