@@ -24,31 +24,36 @@ export function Introduction() {
           </div>
         </div>
 
-        {/* Abstract/Sleek Image Grid without cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 md:gap-8">
+        {/* Media Grid: Video + Doorbell Photo */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 max-w-4xl mx-auto">
           
-          <div className="relative overflow-hidden aspect-[4/5]">
-            <img 
-              src="https://images.unsplash.com/photo-1555664424-778a1e5e1b48?auto=format&fit=crop&q=80" 
-              alt="Hardware Button"
-              className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+          {/* 1: Vídeo do VIBEELL em funcionamento */}
+          <div className="relative overflow-hidden aspect-[4/5] rounded-2xl bg-black border border-gray-100 shadow-sm group">
+            <video 
+              src="https://res.cloudinary.com/ogrsouif/video/upload/v1789828869/WhatsApp_Video_2026-09-19_at_11.40.55.mp4"
+              autoPlay
+              loop
+              muted
+              playsInline
+              controls
+              className="absolute inset-0 w-full h-full object-cover"
             />
+            <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full text-white text-[11px] font-semibold flex items-center gap-1.5 pointer-events-none">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              Vídeo Demonstração
+            </div>
           </div>
 
-          <div className="relative overflow-hidden aspect-[4/5] sm:mt-12 md:mt-16">
+          {/* 2: Foto de alguém tocando a campainha */}
+          <div className="relative overflow-hidden aspect-[4/5] rounded-2xl bg-gray-100 border border-gray-100 shadow-sm group">
             <img 
-              src="https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?auto=format&fit=crop&q=80" 
-              alt="User Lifestyle"
-              className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+              src="https://upload.wikimedia.org/wikipedia/commons/0/04/Doorbell_being_pushed_by_thumb.jpg" 
+              alt="Pessoa acionando a campainha"
+              className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
             />
-          </div>
-
-          <div className="relative overflow-hidden aspect-[4/5]">
-            <img 
-              src="https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&q=80" 
-              alt="Minimalist Design"
-              className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 hover:scale-105"
-            />
+            <div className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full text-white text-xs font-semibold tracking-wide">
+              Acionamento Residencial
+            </div>
           </div>
 
         </div>
