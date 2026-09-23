@@ -1,16 +1,16 @@
 import { Schematic } from './Schematic';
 
 const SIMPLE_TX_PIECES = [
-  { name: 'ESP32 SuperMini', desc: 'Microcontrolador que processa o clique e envia o sinal de alerta através da internet.' },
-  { name: 'Push Button', desc: 'O botão externo que o visitante aperta para tocar a campainha.' }
+  { name: 'ESP32-C3 SuperMini', desc: 'Placa processadora que lê o acionamento entre os pinos G (GND) e 3 (IO3) com pull-up interno e emite o sinal de rádio instantâneo.' },
+  { name: 'Push-Boton (Terminais A e B)', desc: 'Botão pulsador momentâneo com contatos A e B ligado entre o GND e o pino 3 do ESP32 para disparo imediato.' }
 ];
 
 const SIMPLE_RX_PIECES = [
-  { name: 'ESP32 SuperMini', desc: 'Conectado ao Wi-Fi, recebe o sinal da campainha e aciona o motor.' },
-  { name: 'Bateria Li-Po 3.7V', desc: 'Garante que a pulseira seja portátil, durando dias sem recarga.' },
-  { name: 'Módulo TP4056', desc: 'Gerencia o carregamento seguro da bateria através de um cabo USB-C comum.' },
-  { name: 'Transistor e Resistores', desc: 'Atuam como chaves eletrônicas e filtros, garantindo que o motor receba a energia correta e evitando disparos falsos.' },
-  { name: 'Motor Vibratório', desc: 'A peça principal de resposta tátil. Vibra intensamente na pulseira para avisar o usuário.' }
+  { name: 'ESP32-C3 SuperMini', desc: 'Placa receptora da pulseira que recebe o pacote e aciona o Pino 8 (GPIO 8) conectado ao resistor R1.' },
+  { name: 'Bateria Li-Po 3.7V', desc: 'Célula de alimentação recarregável (B+ e B-) conectada aos bornes superiores do módulo de carregamento da pulseira.' },
+  { name: 'Módulo de Carregamento TP4056', desc: 'Placa de carga USB-C responsável por gerenciar a bateria e fornecer a linha de alimentação de 5V ao ESP32 e ao motor.' },
+  { name: 'Transistor TO-92 NPN + Resistor R1', desc: 'Chaveamento de potência acionado pela base através do resistor R1 (1kΩ) conectado ao Pino 8 do ESP32.' },
+  { name: 'Micro Motor Vibratório', desc: 'Atuador com contrapeso excêntrico acionado pelo coletor do transistor, vibrando vigorosamente no pulso ao soar o alarme.' }
 ];
 
 export function HardwareSpecs() {

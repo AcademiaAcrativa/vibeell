@@ -54,7 +54,7 @@ export const HARDWARE_PIECES: HardwareItem[] = [
     role: "Cérebro computacional & Comunicação sem fio",
     specs: "Microcontrolador 32-bit Dual-Core 240MHz, Wi-Fi 802.11 b/g/n, Bluetooth, Antena cerâmica integrada, 520KB SRAM.",
     description: "Escolhido pelo time da ETERJ pelo tamanho ultracompacto (apenas 22.5 x 18 mm) e pelo suporte nativo a redes Wi-Fi. Ele é capaz de conectar à internet da casa ou criar a própria rede de configuração (Modo AP) para o usuário inserir a senha facilmente.",
-    connection: "TX: GPIO04 conectado ao Push Button. RX: GPIO02 conectado à base do Transistor via resistor.",
+    connection: "TX: Pino 3 (GPIO 3) conectado ao Push Button e referenciado ao pino G (GND). RX: Pino 8 (GPIO 8) conectado à base do Transistor via resistor R1 de 1kΩ.",
     importance: "Sendo o cérebro do sistema, comunica a campainha e a pulseira de forma instantânea através do Wi-Fi residencial."
   },
   {
@@ -84,7 +84,7 @@ export const HARDWARE_PIECES: HardwareItem[] = [
     role: "Chave eletrônica para acionamento do motor",
     specs: "Modelo de chaveamento BJT de uso geral (2N2222 ou BC547 / MOSFET), Vce sat: < 0.3V, Corrente de coletor Ic suportada até 800mA.",
     description: "Os pinos GPIO do ESP32 fornecem no máximo 12 a 20 mA de corrente, enquanto o motor vibratório exige de 80 a 140 mA durante o pico de partida. O transistor atua como um interruptor eletrônico acionado pelo sinal lógico do microcontrolador.",
-    connection: "Base ligada ao GPIO02 através do Resistor de 1kΩ. Coletor ligado ao polo negativo do motor vibratório. Emissor ligado ao GND comum.",
+    connection: "Base ligada ao Pino 8 do ESP32 através do Resistor R1 de 1kΩ. Coletor ligado ao polo negativo do motor vibratório. Emissor ligado ao GND comum.",
     importance: "Protege o microcontrolador contra sobrecorrente e ruídos de retorno eletromagnético gerados pelo enrolamento do motor."
   },
   {
@@ -93,19 +93,19 @@ export const HARDWARE_PIECES: HardwareItem[] = [
     quantity: "1 unidade",
     role: "Disparador mecânico externo",
     specs: "Chave táctil momentânea Normalmente Aberta (NA), Vida mecânica estimada: > 100.000 acionamentos, Curso mecânico curto de 0.25mm.",
-    description: "Localizado na unidade externa de fachada (junto ao portão ou porta de entrada). Ao ser pressionado pelo visitante, fecha o circuito elétrico instantaneamente, gerando um pulso de nível lógico alto que desperta o microcontrolador transmissor.",
-    connection: "Um terminal ligado ao VCC (3.3V). O outro terminal ligado ao pino de entrada GPIO04 e referenciado ao GND pelo resistor de pull-down.",
+    description: "Localizado na unidade externa de fachada (junto ao portão ou porta de entrada). Ao ser pressionado pelo visitante, fecha o circuito elétrico instantaneamente, gerando um pulso de nível lógico baixo lido pelo microcontrolador transmissor.",
+    connection: "Terminal A ligado ao pino G (GND) do ESP32 TX. Terminal B ligado ao pino 3 do ESP32 TX com leitura de acionamento por nível lógico baixo (INPUT_PULLUP interno). O pino 3V3 fica completamente livre.",
     importance: "Resposta mecânica clara com clique de confirmação tátil para o visitante que toca a campainha."
   },
   {
     id: "resistor",
-    name: "Resistor de Precisão (1kΩ e 10kΩ)",
-    quantity: "2 unidades",
-    role: "Polarização de corrente e referência estável (Pull-Down)",
-    specs: "Resistores de filme metálico, 1/4W, tolerância de 1% a 5% (10kΩ para pull-down e 1kΩ para limitação de base do transistor).",
-    description: "O resistor de 10kΩ mantém o pino do botão travado firmemente em nível lógico zero (0V) quando o botão não está pressionado, evitando que ruídos estáticos do ar acionem a campainha falsamente. O resistor de 1kΩ limita a corrente na base do transistor.",
-    connection: "Resistor 10kΩ entre o GPIO04 e o GND. Resistor 1kΩ em série entre o GPIO02 e a base do Transistor.",
-    importance: "Elimina falsos disparos provocados por indução eletromagnética da rede elétrica residencial e protege a base do semicondutor."
+    name: "Resistor de Precisão R1 (1kΩ)",
+    quantity: "1 unidade",
+    role: "Polarização e limitação de corrente de base do transistor",
+    specs: "Resistor de filme de carbono/metálico de 1kΩ, 1/4W, tolerância 5%.",
+    description: "O resistor R1 limita a corrente que sai do Pino 8 do ESP32 para a base do transistor a um valor seguro (~2.5mA a 3.3V), garantindo a saturação do transistor sem sobrecarregar a porta lógica.",
+    connection: "Conectado em série entre o Pino 8 do ESP32 e a Base do Transistor.",
+    importance: "Protege a saída digital do microcontrolador contra excesso de corrente."
   },
   {
     id: "motor-vibratorio",
