@@ -1,3 +1,5 @@
+import { VibeellLogo } from './VibeellLogo';
+
 export function Footer() {
   return (
     <footer className="bg-white text-[#09090b] pt-16 md:pt-20 pb-8 md:pb-10 border-t border-gray-100">
@@ -5,10 +7,10 @@ export function Footer() {
         
         <div className="flex flex-col md:flex-row items-center justify-between gap-6 md:gap-8 mb-12 md:mb-16 text-center md:text-left">
           <div>
-            <span className="font-display font-bold text-3xl tracking-tight text-[#09090b] block mb-2">
-              VIBEELL
-            </span>
-            <span className="text-sm text-gray-500">
+            <div className="mb-3">
+              <VibeellLogo size="lg" />
+            </div>
+            <span className="text-sm text-gray-500 font-medium">
               Projeto acadêmico ETERJ • XL FECIP 2026
             </span>
           </div>

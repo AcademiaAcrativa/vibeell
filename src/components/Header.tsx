@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Menu, X, ArrowRight } from 'lucide-react';
+import { VibeellLogo } from './VibeellLogo';
 
 interface HeaderProps {
   activeSection: string;
@@ -26,16 +27,19 @@ export function Header({ activeSection, onNavigate }: HeaderProps) {
 
   return (
     <header className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${
-      isScrolled ? 'py-4 bg-transparent backdrop-blur-md' : 'py-5 md:py-8'
+      isScrolled ? 'py-3.5 bg-white/90 backdrop-blur-md border-b border-gray-100 shadow-xs' : 'py-5 md:py-7 bg-white/50 backdrop-blur-xs'
     }`}>
       <div className="max-w-[1400px] mx-auto px-5 md:px-12">
         <div className="flex items-center justify-between">
           
-          {/* Logo (Like "Folioblox") */}
-          <a href="#inicio" className="flex items-center cursor-pointer" onClick={(e) => { e.preventDefault(); onNavigate('inicio'); }}>
-            <span className="font-bold text-xl md:text-2xl tracking-tight text-[#09090b]">
-              Vibeell
-            </span>
+          {/* Logo Oficial VIBEELL com o Símbolo da Campainha e a Pulseira no 'b' */}
+          <a
+            href="#inicio"
+            className="flex items-center cursor-pointer transition-opacity hover:opacity-90"
+            onClick={(e) => { e.preventDefault(); onNavigate('inicio'); }}
+            title="Vibeell - Página Inicial"
+          >
+            <VibeellLogo size="md" />
           </a>
 
           {/* Desktop Nav (Center) */}

@@ -54,7 +54,7 @@ export const HARDWARE_PIECES: HardwareItem[] = [
     role: "Cérebro computacional & Comunicação sem fio",
     specs: "Microcontrolador 32-bit Dual-Core 240MHz, Wi-Fi 802.11 b/g/n, Bluetooth, Antena cerâmica integrada, 520KB SRAM.",
     description: "Escolhido pelo time da ETERJ pelo tamanho ultracompacto (apenas 22.5 x 18 mm) e pelo suporte nativo a redes Wi-Fi. Ele é capaz de conectar à internet da casa ou criar a própria rede de configuração (Modo AP) para o usuário inserir a senha facilmente.",
-    connection: "TX: Pino 3 (GPIO 3) conectado ao Push Button e referenciado ao pino G (GND). RX: Pino 8 (GPIO 8) conectado à base do Transistor via resistor R1 de 1kΩ.",
+    connection: "TX: Pino 3 (GPIO 3) e pino G (GND) conectados ao Push Button. RX: Pino 3 conectado diretamente ao topo do Diodo D1; pino 5V e G conectados ao TP4056; pino ops/8 conectado à base via resistor R1.",
     importance: "Sendo o cérebro do sistema, comunica a campainha e a pulseira de forma instantânea através do Wi-Fi residencial."
   },
   {
@@ -108,13 +108,23 @@ export const HARDWARE_PIECES: HardwareItem[] = [
     importance: "Protege a saída digital do microcontrolador contra excesso de corrente."
   },
   {
+    id: "diodo-d1",
+    name: "Diodo de Proteção D1",
+    quantity: "1 unidade",
+    role: "Proteção contra corrente reversa e surtos indutivos",
+    specs: "Diodo semicondutor de silício de uso geral (1N4007 / 1N4148 / Schottky), suporta corrente direta de até 1A.",
+    description: "Componente de proteção posicionado na linha de alimentação da pulseira receptora. Assegura a integridade dos semicondutores e do módulo de carga.",
+    connection: "Extremidade superior conectada diretamente ao Pino 3 do ESP32; extremidade inferior conectada ao terminal superior do Transistor e ao terminal esquerdo do Motor.",
+    importance: "Previne picos de retorno e correntes reversas provocadas pelo chaveamento e parada da bobina do motor vibratório."
+  },
+  {
     id: "motor-vibratorio",
     name: "Motor Vibratório (Motorvibrarall / ERM)",
     quantity: "1 unidade",
     role: "Atuador háptico principal",
     specs: "Motor DC de massa excêntrica rotativa tipo moeda (Coin Vibration Motor) ou cilíndrico, Tensão de operação: 2.5V a 3.7V, Rotação: 10.000 a 12.000 RPM.",
     description: "O elemento transformador de todo o projeto. Ele converte a energia elétrica pulsante em energia mecânica vibratória de alta frequência. Quando a campainha é acionada, ele vibra vigorosamente contra o corpo do usuário, avisando-o com clareza imediata.",
-    connection: "Polo positivo ligado ao VCC da bateria. Polo negativo ligado ao coletor do Transistor de potência.",
+    connection: "Terminal esquerdo conectado à linha de D1 e ao topo do Transistor; terminal direito conectado à entrada lateral do Transistor.",
     importance: "Permite que a pessoa com surdez moderada a profunda perceba visitas sem depender de estímulos luminosos que possuem pontos cegos."
   }
 ];
