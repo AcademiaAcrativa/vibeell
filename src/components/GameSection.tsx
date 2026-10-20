@@ -79,25 +79,24 @@ export function GameSection() {
           </div>
         </div>
 
-        {/* Cartaz do jogo */}
-        <div className="relative mx-auto w-full max-w-md aspect-[4/3] rounded-3xl overflow-hidden shadow-xl border border-white bg-gradient-to-b from-[#9fdcf2] via-[#e6f8ff] to-[#d9d4c5]">
-          <div className="absolute inset-x-0 bottom-0 h-[28%] bg-[#d9d4c5] border-t-4 border-[#4cc24c]" />
-          <div className="absolute left-[12%] right-[12%] bottom-[28%] h-[46%] bg-[#2c6e8c] rounded-t-xl" />
-          <div className="absolute left-[18%] right-[18%] bottom-[28%] h-[10%] bg-[#f7931e] rounded-b-md opacity-90" />
-          <div className="absolute inset-x-0 top-[12%] text-center">
-            <div className="text-5xl sm:text-6xl font-black tracking-tight text-white drop-shadow-[0_3px_0_#143a52]">
-              VIBEELL
-            </div>
-            <div className="mt-2 text-xs sm:text-sm font-bold tracking-widest text-[#143a52]">
-              CAMPAINHA VIBRATÓRIA
-            </div>
-          </div>
+        {/* Prévia do menu real do jogo (desfocada) com o botão de jogar por cima */}
+        <div className="relative mx-auto w-full max-w-md aspect-[8/7] rounded-3xl overflow-hidden shadow-xl border border-white bg-black">
+          {!playing && (
+            <iframe
+              src="/jogo/index.html?preview=1"
+              title="Prévia do menu do jogo VIBEELL"
+              tabIndex={-1}
+              aria-hidden="true"
+              className="absolute inset-0 w-full h-full border-0 pointer-events-none blur-[3px] scale-105"
+            />
+          )}
+          <div className="absolute inset-0 bg-black/15" />
           <button
             onClick={startGame}
-            aria-label="Jogar VIBEELL"
-            className="absolute left-1/2 bottom-[8%] -translate-x-1/2 bg-white text-[#0055ff] rounded-full p-4 shadow-lg hover:scale-110 transition-transform"
+            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 inline-flex items-center gap-3 bg-[#0055ff] text-white px-7 py-4 rounded-full font-bold text-base shadow-xl hover:scale-105 transition-transform"
           >
-            <Play className="w-6 h-6 fill-current" />
+            <Play className="w-5 h-5 fill-current" />
+            JOGAR
           </button>
         </div>
       </div>

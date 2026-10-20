@@ -103,18 +103,20 @@ const INTRO_LEN = 240;
 const HERO_H = 22;     // altura da caixa de colisão do herói
 const OUT = '#1a0d05'; // cor do contorno dos sprites
 
+// modo prévia (?preview=1): só mostra o menu, sem botões de toque e sem iniciar sozinho
+const PREVIEW = new URLSearchParams(location.search).has('preview');
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 ctx.imageSmoothingEnabled = false;
 
 const touchBar = document.getElementById('touch');
 const IS_TOUCH = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
-if (IS_TOUCH) touchBar.classList.add('on');
+if (IS_TOUCH && !PREVIEW) touchBar.classList.add('on');
 
 function fit() {
   const ctrl = IS_TOUCH ? touchBar.offsetHeight : 0;
   const s = Math.min(innerWidth / W, (innerHeight - ctrl) / H);
-  const k = (s >= 1 && !IS_TOUCH) ? Math.floor(s) : s;
+  const k = (s >= 1 && !IS_TOUCH && !PREVIEW) ? Math.floor(s) : s;
   canvas.style.width = (W * k) + 'px';
   canvas.style.height = (H * k) + 'px';
 }
@@ -794,7 +796,7 @@ function update() {
     case 'title':
       titleHero.vx = 0.9; titleHero.face = 1; titleHero.x += 0.9; animate(titleHero);
       if (titleHero.x > W + 24) titleHero.x = -28;
-      if (input.start) startGame();
+      if (input.start && !PREVIEW) startGame();
       break;
     case 'intro': updateIntro(); break;
     case 'play': updatePlay(); break;
