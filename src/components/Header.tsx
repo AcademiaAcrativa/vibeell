@@ -22,6 +22,7 @@ export function Header({ activeSection, onNavigate }: HeaderProps) {
   const navItems = [
     { id: 'inicio', label: 'Home' },
     { id: 'introducao', label: 'Sobre' },
+    { id: 'jogo', label: 'Jogo' },
     { id: 'pecas', label: 'Projetos' }, // Changed to "Projetos" to match reference vibe
   ];
 

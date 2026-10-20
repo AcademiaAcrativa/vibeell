@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { Hero } from './components/Hero';
 import { Introduction } from './components/Introduction';
+import { GameSection } from './components/GameSection';
 import { Methodology } from './components/Methodology';
 import { HardwareSpecs } from './components/HardwareSpecs';
 import { DevelopmentResults } from './components/DevelopmentResults';
@@ -82,7 +83,7 @@ export default function App() {
     if (isProtectedLocked) return;
 
     const handleScroll = () => {
-      const sections = ['inicio', 'introducao', 'metodologia', 'pecas', 'desenvolvimento', 'equipe', 'faq'];
+      const sections = ['inicio', 'introducao', 'jogo', 'metodologia', 'pecas', 'desenvolvimento', 'equipe', 'faq'];
       const scrollPos = window.scrollY + 200;
 
       for (const sec of sections) {
@@ -132,6 +133,7 @@ export default function App() {
       <main>
         <Hero onExplore={() => handleNavigate('introducao')} onViewHardware={() => handleNavigate('pecas')} />
         <Introduction />
+        <GameSection />
         <Methodology />
         <HardwareSpecs />
         <DevelopmentResults />

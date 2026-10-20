@@ -1,0 +1,1266 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>VIBEELL - Campainha Vibratória</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body {
+    margin: 0; height: 100%; background: #111; overflow: hidden;
+    font-family: "Courier New", Courier, monospace;
+    user-select: none; -webkit-user-select: none; touch-action: none;
+  }
+  body { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  #game { display: block; image-rendering: pixelated; image-rendering: crisp-edges; background: #000; }
+  #touch {
+    display: none; width: 100%; box-sizing: border-box;
+    padding: 8px 14px calc(10px + env(safe-area-inset-bottom));
+    background: linear-gradient(#24303f, #141c27);
+    border-top: 3px solid #0b1118;
+    justify-content: space-between; align-items: center;
+    touch-action: none; user-select: none; -webkit-user-select: none;
+  }
+  #touch.on { display: flex; }
+
+  /* direcional em cruz */
+  .pad { position: relative; width: 124px; height: 124px; flex: none; }
+  .pad svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 4px 0 #0a0f16); }
+  .pad .hl { fill: transparent; transition: fill .08s; }
+  .pad .hl.on { fill: rgba(47, 143, 255, .55); }
+
+  /* botões A e B */
+  .abtns { position: relative; width: 158px; height: 118px; flex: none; }
+  .btn {
+    position: absolute; width: 66px; height: 66px; border: 0; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font: 900 24px "Arial Black", Impact, sans-serif; color: #fff;
+    text-shadow: 0 2px 0 rgba(0,0,0,.35);
+    transition: transform .06s, box-shadow .06s;
+    touch-action: none;
+  }
+  .btn.a { right: 0; top: 4px; background: radial-gradient(circle at 35% 30%, #ffc266, #f7931e 60%, #c96a0c);
+           box-shadow: 0 6px 0 #8a4a08, 0 10px 16px rgba(0,0,0,.45); }
+  .btn.b { left: 0; top: 40px; background: radial-gradient(circle at 35% 30%, #5fa4bd, #2c6e8c 60%, #1b4a61);
+           box-shadow: 0 6px 0 #123444, 0 10px 16px rgba(0,0,0,.45); }
+  .btn.down { transform: translateY(4px); }
+  .btn.a.down { box-shadow: 0 2px 0 #8a4a08, 0 4px 8px rgba(0,0,0,.4); }
+  .btn.b.down { box-shadow: 0 2px 0 #123444, 0 4px 8px rgba(0,0,0,.4); }
+  .lbl {
+    position: absolute; font: 700 9px "Courier New", monospace; letter-spacing: 1px;
+    color: #9fb0c4; text-align: center; width: 66px;
+  }
+  .lbl.a { right: 0; top: 74px; }
+  .lbl.b { left: 0; top: 110px; }
+
+  /* marca no centro */
+  .brand { text-align: center; font: 900 11px "Arial Black", Impact, sans-serif; color: #5d7088; letter-spacing: 2px; line-height: 1.3; }
+  .brand small { display: block; font: 700 8px "Courier New", monospace; color: #3f5064; letter-spacing: 1px; }
+</style>
+</head>
+<body>
+<canvas id="game" width="256" height="224"></canvas>
+<div id="touch">
+  <div class="pad" id="pad">
+    <svg viewBox="0 0 100 100" aria-hidden="true">
+      <defs>
+        <linearGradient id="gpad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#6b7889"/>
+          <stop offset="1" stop-color="#34404f"/>
+        </linearGradient>
+      </defs>
+      <path d="M36 4 H64 V36 H96 V64 H64 V96 H36 V64 H4 V36 H36 Z" fill="url(#gpad)" stroke="#161e28" stroke-width="2" stroke-linejoin="round"/>
+      <rect class="hl" data-dir="left" x="4" y="36" width="32" height="28"/>
+      <rect class="hl" data-dir="right" x="64" y="36" width="32" height="28"/>
+      <rect class="hl" data-dir="up" x="36" y="4" width="28" height="32"/>
+      <circle cx="50" cy="50" r="8" fill="#243041"/>
+      <path d="M50 12 L57 22 H43 Z" fill="#c9d3e0"/>
+      <path d="M50 88 L57 78 H43 Z" fill="#c9d3e0"/>
+      <path d="M12 50 L22 43 V57 Z" fill="#f2f5f9"/>
+      <path d="M88 50 L78 43 V57 Z" fill="#f2f5f9"/>
+    </svg>
+  </div>
+
+  <div class="brand">VIBE<br>ELL<small>CONTROLE</small></div>
+
+  <div class="abtns">
+    <button class="btn b" id="btnB" aria-label="Correr">B</button>
+    <button class="btn a" id="btnA" aria-label="Pular">A</button>
+    <div class="lbl b">CORRER</div>
+    <div class="lbl a">PULAR</div>
+  </div>
+</div>
+<script>
+// ============================================================
+//  VIBEELL - Campainha Vibratória
+//  Uma fase. Todos os sprites são desenhados em código (sem assets).
+//  Personagens são montados por partes (cabeça, tronco, braços, pernas)
+//  que giram nas animações de andar, correr, pular e acenar.
+// ============================================================
+
+const W = 256, H = 224, GROUND = 192, LEVEL_W = 3600;
+const INTRO_LEN = 240;
+const HERO_H = 22;     // altura da caixa de colisão do herói
+const OUT = '#1a0d05'; // cor do contorno dos sprites
+
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+
+const touchBar = document.getElementById('touch');
+const IS_TOUCH = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+if (IS_TOUCH) touchBar.classList.add('on');
+
+function fit() {
+  const ctrl = IS_TOUCH ? touchBar.offsetHeight : 0;
+  const s = Math.min(innerWidth / W, (innerHeight - ctrl) / H);
+  const k = (s >= 1 && !IS_TOUCH) ? Math.floor(s) : s;
+  canvas.style.width = (W * k) + 'px';
+  canvas.style.height = (H * k) + 'px';
+}
+addEventListener('resize', fit);
+fit();
+
+// ---------------- utilidades ----------------
+const R = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), w, h); };
+const ov = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+const solidAt = (px, py) => solids.some(s => px >= s.x && px < s.x + s.w && py >= s.y && py < s.y + s.h);
+const easeOut = t => 1 - Math.pow(1 - t, 3);
+const easeIO = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+const FONT = px => `bold ${px}px "Courier New", Courier, monospace`;
+const FONTB = px => `900 ${px}px "Arial Black", Impact, sans-serif`;
+
+function text(s, x, y, o = {}) {
+  const { c = '#fff', a = 'left', size = 8 } = o;
+  ctx.font = FONT(size); ctx.textAlign = a; ctx.textBaseline = 'top';
+  ctx.fillStyle = '#1a0e08'; ctx.fillText(s, x + 1, y + 1);
+  ctx.fillStyle = c; ctx.fillText(s, x, y);
+  ctx.textAlign = 'left';
+}
+
+function outlined(s, x, y, size, fill, stroke = '#1d1030', lw = 3) {
+  ctx.font = FONT(size); ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.lineJoin = 'round'; ctx.lineWidth = lw; ctx.strokeStyle = stroke;
+  ctx.strokeText(s, x, y); ctx.fillStyle = fill; ctx.fillText(s, x, y);
+  ctx.textAlign = 'left';
+}
+
+// mistura uma cor com preto (a<0) ou branco (a>0)
+function shade(hex, a) {
+  const n = parseInt(hex.slice(1), 16);
+  let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  const t = a < 0 ? 0 : 255, p = Math.abs(a);
+  r = Math.round(r + (t - r) * p); g = Math.round(g + (t - g) * p); b = Math.round(b + (t - b) * p);
+  return '#' + ((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1);
+}
+
+// painel com contorno, luz em cima e sombra embaixo
+function panel(x, y, w, h, c) {
+  R(x, y, w, h, shade(c, -0.6));
+  R(x + 1, y + 1, w - 2, h - 2, c);
+  R(x + 1, y + 1, w - 2, 1, shade(c, 0.35));
+  R(x + 1, y + h - 2, w - 2, 1, shade(c, -0.25));
+}
+
+// elipse com contorno escuro (títulos e arbustos)
+function blob(x, y, rx, ry, c, outline) {
+  ctx.fillStyle = outline;
+  ctx.beginPath(); ctx.ellipse(x, y, rx + 1, ry + 1, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = c;
+  ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
+}
+
+// ---------------- sprites ----------------
+// Cada sprite é uma lista de linhas de texto; cada letra é uma cor da paleta.
+// Com outline=true, ganha um contorno escuro de 1px (ox/oy indicam o deslocamento).
+function makeSprite(rows, pal, outline) {
+  const w = Math.max(...rows.map(r => r.length));
+  const h = rows.length;
+  const base = document.createElement('canvas'); base.width = w; base.height = h;
+  const g = base.getContext('2d');
+  rows.forEach((row, y) => {
+    for (let x = 0; x < row.length; x++) {
+      const col = pal[row[x]];
+      if (col) { g.fillStyle = col; g.fillRect(x, y, 1, 1); }
+    }
+  });
+  let foot = 0;
+  rows.forEach((row, y) => { if (/[^.]/.test(row)) foot = y + 1; });
+
+  let c = base, ox = 0, oy = 0;
+  if (outline) {
+    c = document.createElement('canvas'); c.width = w + 2; c.height = h + 2;
+    const o = c.getContext('2d');
+    o.fillStyle = outline;
+    // para cada pixel opaco, pinta de contorno os 4 vizinhos (o sprite é desenhado por cima depois)
+    rows.forEach((row, y) => {
+      for (let x = 0; x < row.length; x++) {
+        if (!pal[row[x]]) continue;
+        const px = x + 1, py = y + 1;
+        o.fillRect(px - 1, py, 1, 1);
+        o.fillRect(px + 1, py, 1, 1);
+        o.fillRect(px, py - 1, 1, 1);
+        o.fillRect(px, py + 1, 1, 1);
+      }
+    });
+    o.drawImage(base, 1, 1);
+    ox = 1; oy = 1;
+  }
+  c.ox = ox; c.oy = oy; c.foot = foot;
+  return c;
+}
+
+function makeCanvas(w, h, fn) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  fn(c.getContext('2d'));
+  return c;
+}
+const fillOn = (g, x, y, w, h, c) => { g.fillStyle = c; g.fillRect(x, y, w, h); };
+
+// desenha uma imagem; flip espelha em torno do próprio centro
+function blit(img, x, y, flip = false, dw = img.width, dh = img.height) {
+  x = Math.round(x); y = Math.round(y);
+  if (!flip) { ctx.drawImage(img, x, y, dw, dh); return; }
+  ctx.save();
+  ctx.translate(x + dw, y); ctx.scale(-1, 1);
+  ctx.drawImage(img, 0, 0, dw, dh);
+  ctx.restore();
+}
+// parte do corpo: (x,y) é o canto superior esquerdo da parte, sem contorno
+const drawPart = (img, x, y) => ctx.drawImage(img, Math.round(x) - img.ox, Math.round(y) - img.oy);
+
+// ----- partes do personagem (olhando para a direita) -----
+// Cabeça com cabelo castanho comum (franja e laterais), sem chapéu
+const HEAD_ROWS = [
+  '..hhhhhhh..',
+  '.hhhHHhhhhh',
+  'hhhhhhhhhhh',
+  'hhssssssshh',
+  'hhsesssesss',
+  'hsssssssssS',
+  'hsssssmmsss',
+  '.sssssssss.',
+  '...ssssss..'
+];
+// Cabelo que cai atrás dos ombros (desenhado antes do tronco)
+const HAIR_BACK_ROWS = [
+  'hhhh', 'hhhh', 'hhHh', 'hhhh', 'hhhh', 'hhhh', 'hhh.', 'hhh.', 'hh..', 'hh..', 'h...'
+];
+// Camiseta azul-petróleo com marca ETERJ (faixa branca e barra laranja) e short azul-escuro
+const TORSO_ROWS = [
+  'tTtttttt',
+  'tttttttt',
+  'ttwwwttt',
+  'tttoooot',
+  'tttttttt',
+  'nnnnnnnn',
+  'nnnnnnnn'
+];
+const ARM_ROWS = ['tttt', 'tttt', 'tttt', 'ssss', 'ssss', 'yyyy', 'YYYY', 'ssss'];
+const LEG_ROWS = ['nnnn', 'nnnn', 'ssss', 'ssss', 'kkkk', 'kkkk'];
+
+const HERO_PAL = {
+  h: '#6b4424', H: '#9a6a3a', s: '#f2bfa0', S: '#dd9c7c', e: '#1a1a1a',
+  m: '#c8685a', t: '#2c6e8c', T: '#1f5870', w: '#ffffff', o: '#f7931e',
+  n: '#1b3450', k: '#2a1408', y: '#ffd400', Y: '#b38a00'
+};
+const FRIEND_PAL = {
+  h: '#e0b020', H: '#ffd55a', s: '#ffd2b0', S: '#f0a880', e: '#1a1a1a',
+  m: '#e0806a', t: '#d9557a', T: '#b53f62', w: '#ffffff', o: '#f7931e',
+  n: '#3a3a5a', k: '#2a1408', y: '#ffd400', Y: '#b38a00'
+};
+
+// monta o conjunto de sprites de um personagem; as partes de trás ficam mais escuras
+function makeRig(pal) {
+  const dark = {};
+  for (const k in pal) dark[k] = shade(pal[k], -0.3);
+  return {
+    hairBack: makeSprite(HAIR_BACK_ROWS, dark, OUT),
+    head: makeSprite(HEAD_ROWS, pal, OUT),
+    torso: makeSprite(TORSO_ROWS, pal, OUT),
+    arm: makeSprite(ARM_ROWS, pal, OUT),
+    leg: makeSprite(LEG_ROWS, pal, OUT),
+    armB: makeSprite(ARM_ROWS, dark, OUT),
+    legB: makeSprite(LEG_ROWS, dark, OUT)
+  };
+}
+const RIG_HERO = makeRig(HERO_PAL);
+const RIG_FRIEND = makeRig(FRIEND_PAL);
+
+// ----- barata (inimigo) -----
+const BARATA_PAL = { d: '#2a160a', c: '#8c4d20', C: '#b8702e', H: '#e0a060', w: '#ffffff', e: '#111111', l: '#4a2a12' };
+const BLANK16 = '................';
+const SPR_BARATA = {
+  walk1: makeSprite([
+    '................', '................', '..l.........l...', '...l.......l....',
+    '....dddddddd....', '...dCCCCCCCCd...', '..dCHHCCCCCCCd..', '.dCHwewCCCCCCCd.',
+    '.dCCCCCCCCCCCCd.', '.dCCcCCCCCCcCCd.', '..dcccccccccccd.', '..dccccccccccd..',
+    '...dddddddddd...', '..l.l.l.l.l.l...', '...l.l.l.l.l....', BLANK16
+  ], BARATA_PAL),
+  walk2: makeSprite([
+    '................', '................', '..l.........l...', '...l.......l....',
+    '....dddddddd....', '...dCCCCCCCCd...', '..dCHHCCCCCCCd..', '.dCHwewCCCCCCCd.',
+    '.dCCCCCCCCCCCCd.', '.dCCcCCCCCCcCCd.', '..dcccccccccccd.', '..dccccccccccd..',
+    '...dddddddddd...', '...l.l.l.l.l....', '..l.l.l.l.l.l...', BLANK16
+  ], BARATA_PAL),
+  flat: makeSprite([
+    BLANK16, BLANK16, BLANK16, BLANK16, BLANK16, BLANK16, BLANK16, BLANK16, BLANK16, BLANK16,
+    BLANK16, BLANK16, BLANK16, '..dCCCCCCCCCCd..', '..dddddddddddd..', BLANK16
+  ], BARATA_PAL)
+};
+
+// ----- rato (inimigo) -----
+const RATO_PAL = { G: '#9a9aa6', g: '#6c6c78', L: '#c4c4cc', p: '#f2a0b0', P: '#d0707e', e: '#151515', n: '#ff5f7f', t: '#e89aa8' };
+const SPR_RATO = {
+  walk1: makeSprite([
+    '................', '..........pp....', '.........pPPp...', '...GGGGGGGGGG...',
+    '..GGGGGGGGGGGG..', 'tGGGGGGGGGGeGGnn', 'tGGGGGGGGGGGGGG.', 'tGGGGGGGGGGGGG..',
+    '..GGGGGGGGGGG...', '..GLLLLLLLLLG...', '..G.G..G..G.G...', '.gg.gg.gg.gg....',
+    '.ggg...ggg......', BLANK16, BLANK16, BLANK16
+  ], RATO_PAL),
+  walk2: makeSprite([
+    '................', '..........pp....', '.........pPPp...', '...GGGGGGGGGG...',
+    '..GGGGGGGGGGGG..', 'tGGGGGGGGGGeGGnn', 'tGGGGGGGGGGGGGG.', 'tGGGGGGGGGGGGG..',
+    '..GGGGGGGGGGG...', '..GLLLLLLLLLG...', '...G..G..G..G...', '..gg.gg..gg.gg..',
+    '..ggg...ggg.....', BLANK16, BLANK16, BLANK16
+  ], RATO_PAL),
+  flat: makeSprite([
+    BLANK16, BLANK16, BLANK16, BLANK16, BLANK16, BLANK16, BLANK16, BLANK16, BLANK16, BLANK16,
+    BLANK16, BLANK16, '..GGGGGGGGGGGG..', '.PPPPPPPPPPPPPP.', BLANK16, BLANK16
+  ], RATO_PAL)
+};
+
+// ----- mosca (inimigo voador) -----
+const MOSCA_PAL = { W: '#e6f4ff', w: '#8fb8e0', d: '#2b2b33', k: '#f2c230', R: '#ff3b3b' };
+const MOSCA_BODY = [
+  '....dddddddd....', '...dkkdkkdkkd...', '..dkkkkdkkkkkd..', '..dRRdkkkkkkd...',
+  '..dRRddkkkkdd...', '...ddddddddd....', '....dddddddd....', '....d.d...d.d...',
+  '....d.d...d.d...'
+];
+const SPR_MOSCA = {
+  up: makeSprite([
+    '..WW.......WW...', '.WWWWW....WWWWW.', 'WWWWWWWWWWWWWWWW', '.WWwWWWWWWWWwWW.',
+    '..wwwwwwwwwwww..', ...MOSCA_BODY
+  ], MOSCA_PAL),
+  down: makeSprite([
+    BLANK16, '..WWWWWWWWWWWW..', '.WWwWWWWWWWWwWW.', '..wwwwwwwwwwww..',
+    ...MOSCA_BODY
+  ], MOSCA_PAL)
+};
+
+// ----- moeda (8x8) -----
+const SPR_COIN = makeSprite([
+  '..KKKK..', '.KYYYYyK.', 'KYwwYYyyK', 'KYwYYYyyK', 'KYYYYYyyK', 'KYYYYyyyK', '.KyyyyyK.', '..KKKK..'
+], { K: '#8a4b00', y: '#f0a500', Y: '#ffd23f', w: '#fff7c2' });
+
+// ----- bloco "?" (procedural) -----
+function makeQBlock(used) {
+  return makeCanvas(16, 16, g => {
+    if (used) {
+      fillOn(g, 0, 0, 16, 16, '#4a2e14');
+      fillOn(g, 1, 1, 14, 14, '#8a5a2b');
+      fillOn(g, 1, 1, 14, 1, '#a57040');
+      [[3, 3], [11, 3], [3, 11], [11, 11]].forEach(([x, y]) => fillOn(g, x, y, 2, 2, '#c99a5b'));
+      return;
+    }
+    fillOn(g, 0, 0, 16, 16, '#5a3000');
+    fillOn(g, 1, 1, 14, 14, '#ffb300');
+    fillOn(g, 1, 1, 14, 1, '#ffe27a');
+    fillOn(g, 1, 1, 1, 14, '#ffd24a');
+    fillOn(g, 1, 14, 14, 1, '#c57a00');
+    fillOn(g, 14, 1, 1, 14, '#c57a00');
+    [[2, 2], [13, 2], [2, 13], [13, 13]].forEach(([x, y]) => fillOn(g, x, y, 1, 1, '#fff0b0'));
+    const glyph = ['.###.', '#...#', '....#', '...#.', '..#..', '.....', '..#..'];
+    glyph.forEach((row, gy) => {
+      for (let gx = 0; gx < row.length; gx++) if (row[gx] === '#') fillOn(g, 5 + gx, 3 + gy, 1, 1, '#fff6d0');
+    });
+  });
+}
+const SPR_QBLOCK = makeQBlock(false);
+const SPR_QUSED = makeQBlock(true);
+
+// ----- tiles repetidos (padrões) -----
+let PAT = {};
+function buildPatterns() {
+  const wall = makeCanvas(16, 16, g => {
+    fillOn(g, 0, 0, 16, 16, '#f2d49a');
+    fillOn(g, 0, 0, 1, 16, '#e6c284');
+    const d = '#dfac62';
+    for (const [cx, cy] of [[8, 8], [0, 0], [16, 0], [0, 16], [16, 16]]) {
+      for (let dy = -4; dy <= 4; dy++) {
+        const wdt = 4 - Math.abs(dy);
+        for (let dx = -wdt; dx <= wdt; dx++) {
+          const px = cx + dx, py = cy + dy;
+          if (px >= 0 && px < 16 && py >= 0 && py < 16) fillOn(g, px, py, 1, 1, d);
+        }
+      }
+    }
+  });
+  const floor = makeCanvas(16, 16, g => {
+    fillOn(g, 0, 0, 16, 16, '#a0612f');
+    fillOn(g, 0, 0, 16, 1, '#d08c52');
+    fillOn(g, 0, 7, 16, 1, '#6b3d1c');
+    fillOn(g, 0, 15, 16, 1, '#6b3d1c');
+    fillOn(g, 8, 1, 1, 6, '#6b3d1c');
+    fillOn(g, 3, 8, 1, 6, '#6b3d1c');
+    fillOn(g, 12, 8, 1, 6, '#6b3d1c');
+    fillOn(g, 2, 3, 4, 1, '#b87438');
+    fillOn(g, 10, 11, 4, 1, '#b87438');
+  });
+  const skirt = makeCanvas(16, 10, g => {
+    fillOn(g, 0, 0, 16, 10, '#b97a3c');
+    fillOn(g, 0, 0, 16, 1, '#d89a58');
+    fillOn(g, 0, 8, 16, 2, '#8a5a2a');
+  });
+  const dirt = makeCanvas(16, 16, g => {
+    fillOn(g, 0, 0, 16, 16, '#c98a3c');
+    [[2, 3], [9, 2], [13, 9], [5, 11], [11, 13], [1, 14]].forEach(([x, y]) => fillOn(g, x, y, 2, 2, '#a86b2a'));
+  });
+  PAT.wall = ctx.createPattern(wall, 'repeat');
+  PAT.floor = ctx.createPattern(floor, 'repeat');
+  PAT.skirt = ctx.createPattern(skirt, 'repeat');
+  PAT.dirt = ctx.createPattern(dirt, 'repeat');
+}
+buildPatterns();
+
+// ---------------- som e vibração ----------------
+let actx = null;
+function beep(f, d, type = 'square', vol = 0.05) {
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const t = actx.currentTime;
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = type; o.frequency.setValueAtTime(f, t);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    o.connect(g).connect(actx.destination);
+    o.start(t); o.stop(t + d);
+  } catch (e) {}
+}
+const buzz = () => beep(60, 0.4, 'sawtooth', 0.07);
+const vibrate = p => { try { if (navigator.vibrate) navigator.vibrate(p); } catch (e) {} };
+
+// ---------------- entrada ----------------
+const input = { left: false, right: false, run: false, jumpHeld: false, jumpPressed: false, start: false };
+const KEYMAP = {
+  ArrowLeft: 'left', KeyA: 'left',
+  ArrowRight: 'right', KeyD: 'right',
+  ShiftLeft: 'run', ShiftRight: 'run', KeyX: 'run',
+  ArrowUp: 'jump', KeyW: 'jump', Space: 'jump', KeyZ: 'jump'
+};
+function setKey(code, down, repeat) {
+  if ((code === 'Enter' || code === 'NumpadEnter' || code === 'Space') && down && !repeat) input.start = true;
+  if (code === 'Escape' && down) goTitle();
+  const k = KEYMAP[code];
+  if (!k) return;
+  if (k === 'jump') {
+    if (down && !repeat) input.jumpPressed = true;
+    input.jumpHeld = down;
+  } else input[k] = down;
+}
+addEventListener('keydown', e => {
+  if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
+  setKey(e.code, true, e.repeat);
+});
+addEventListener('keyup', e => setKey(e.code, false, false));
+
+// ----- controles de toque: direcional (esq./dir./cima = pular) e botões A (pular) e B (correr) -----
+const holds = { a: false, up: false };
+function updJump() {
+  const h = holds.a || holds.up;
+  if (h && !input.jumpHeld) input.jumpPressed = true;
+  input.jumpHeld = h;
+}
+const pad = document.getElementById('pad');
+let padPid = null;
+function padDir(e) {
+  const r = pad.getBoundingClientRect();
+  const dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+  const t = r.width * 0.12;
+  if (Math.abs(dx) > Math.abs(dy)) {
+    if (dx < -t) return 'left';
+    if (dx > t) return 'right';
+  } else if (dy < -t) return 'up';
+  return null;
+}
+function paintPad(d) {
+  pad.querySelectorAll('.hl').forEach(el => el.classList.toggle('on', el.dataset.dir === d));
+}
+function applyPad(e) {
+  const d = e ? padDir(e) : null;
+  input.left = d === 'left';
+  input.right = d === 'right';
+  holds.up = d === 'up';
+  updJump();
+  paintPad(d);
+}
+pad.addEventListener('pointerdown', e => {
+  padPid = e.pointerId; pad.setPointerCapture(e.pointerId);
+  input.start = true; applyPad(e);
+});
+pad.addEventListener('pointermove', e => { if (e.pointerId === padPid) applyPad(e); });
+const padEnd = e => { if (e.pointerId === padPid) { padPid = null; applyPad(null); } };
+pad.addEventListener('pointerup', padEnd);
+pad.addEventListener('pointercancel', padEnd);
+
+function bindBtn(el, onDown, onUp) {
+  el.addEventListener('pointerdown', e => {
+    e.preventDefault(); el.setPointerCapture(e.pointerId);
+    el.classList.add('down'); input.start = true; onDown();
+  });
+  const up = () => { el.classList.remove('down'); onUp(); };
+  el.addEventListener('pointerup', up);
+  el.addEventListener('pointercancel', up);
+  el.addEventListener('lostpointercapture', up);
+}
+bindBtn(document.getElementById('btnA'), () => { holds.a = true; updJump(); }, () => { holds.a = false; updJump(); });
+bindBtn(document.getElementById('btnB'), () => { input.run = true; }, () => { input.run = false; });
+canvas.addEventListener('pointerdown', () => { input.start = true; });
+
+// ---------------- mundo ----------------
+const solids = [];
+const S = (x, y, w, h, kind) => { const s = { x, y, w, h, kind, used: false, bump: 0 }; solids.push(s); return s; };
+
+// chão com três buracos (900-936, 1650-1690, 2600-2648)
+[[0, 900], [936, 1650], [1690, 2600], [2648, 3600]].forEach(([a, b]) => S(a, GROUND, b - a, H - GROUND, 'floor'));
+S(420, 160, 120, 32, 'sofa');
+S(700, 150, 80, 6, 'table');
+S(1000, 120, 80, 6, 'shelf');
+S(1200, 176, 16, 16, 'box'); S(1216, 160, 16, 32, 'box'); S(1232, 144, 16, 48, 'box');
+S(1248, 160, 16, 32, 'box'); S(1264, 176, 16, 16, 'box');
+S(1800, 150, 100, 42, 'bed');
+S(2260, 160, 30, 32, 'stool');
+S(2300, 128, 80, 64, 'cab');
+S(2700, 136, 80, 6, 'shelf');
+S(3000, 160, 60, 6, 'table');
+S(3200, 130, 80, 6, 'shelf');
+for (const x of [600, 616, 632]) S(x, 128, 16, 16, 'q');
+
+const coins = [];
+const row = (x, y, n, gap) => { for (let i = 0; i < n; i++) coins.push({ x: x + i * gap, y, got: false }); };
+row(440, 134, 4, 14); row(712, 128, 3, 12); row(904, 164, 3, 10); row(1020, 98, 4, 14);
+row(1204, 128, 4, 12); row(1656, 164, 4, 10); row(1830, 128, 4, 14); row(2000, 176, 5, 12);
+row(2320, 98, 4, 14); row(2604, 164, 5, 10); row(2716, 116, 3, 12); row(3012, 136, 3, 12);
+row(3220, 108, 3, 12); row(3340, 176, 4, 12);
+
+const checkpoints = [{ x: 1720, on: false }, { x: 2700, on: false }];
+const door = { x: 3440, y: GROUND - 64, w: 40, h: 64, open: 0 };
+
+// [tipo, x, y, direção, velocidade, minX, maxX]  (y de andantes = topo da superfície - 10)
+const ENEMY_DEF = [
+  ['barata', 320, GROUND - 10, -1, 0.5],
+  ['barata', 452, 150, 1, 0.4],
+  ['mosca', 760, 88, -1, 0.7, 700, 880],
+  ['rato', 1080, GROUND - 10, -1, 0.9],
+  ['rato', 1830, 140, 1, 0.7],
+  ['barata', 2010, GROUND - 10, 1, 0.5],
+  ['mosca', 2150, 96, 1, 0.8, 2080, 2260],
+  ['barata', 2420, GROUND - 10, -1, 0.6],
+  ['rato', 2900, GROUND - 10, -1, 1.0],
+  ['barata', 3120, GROUND - 10, -1, 0.7],
+  ['mosca', 3300, 100, -1, 0.9, 3240, 3400]
+];
+function makeEnemies() {
+  return ENEMY_DEF.map(([type, x, y, dir, spd, minX, maxX]) => {
+    const flyer = type === 'mosca';
+    return {
+      type, x, y, base: y, w: flyer ? 10 : 12, h: flyer ? 8 : 10, dir, spd,
+      minX: minX ?? 0, maxX: maxX ?? LEVEL_W, flyer,
+      vy: 0, onG: false, dead: false, flat: false, dt: 0, t: 0, anim: 0
+    };
+  });
+}
+function makeHero(x, y) {
+  return { x, y, w: 12, h: HERO_H, vx: 0, vy: 0, onG: false, face: 1, walkT: 0, vib: 0, wave: false, hidden: false };
+}
+function makeFriend(x, y) {
+  return { x, y, w: 12, h: HERO_H, vx: 0, vy: 0, onG: true, face: -1, walkT: 0, vib: 0, wave: false };
+}
+
+// ---------------- estado ----------------
+let state = 'title', T = 0, gt = 0;
+let score = 0, coinCount = 0, lives = 3, time = 300, timeTick = 0;
+let banner = 0, bannerText = '';
+let endPhase = 0;
+let respawn = { x: 24, y: GROUND - HERO_H };
+let hero = makeHero(24, GROUND - HERO_H);
+let titleHero = makeHero(150, GROUND - HERO_H);
+titleHero.onG = true;
+let friend = null;
+let enemies = [], pops = [], floats = [];
+
+function setState(s) { state = s; T = 0; }
+function resetLevelObjects() { enemies = makeEnemies(); pops = []; floats = []; time = 300; timeTick = 0; }
+
+function startGame() {
+  score = 0; coinCount = 0; lives = 3;
+  coins.forEach(c => c.got = false);
+  solids.forEach(s => { if (s.kind === 'q') { s.used = false; s.bump = 0; } });
+  checkpoints.forEach(c => c.on = false);
+  door.open = 0;
+  friend = null;
+  respawn = { x: 24, y: GROUND - HERO_H };
+  resetLevelObjects();
+  hero = makeHero(respawn.x, respawn.y);
+  hero.onG = true;
+  setState('intro');
+  vibrate([120, 60, 120, 60, 250]);
+  buzz();
+}
+function goTitle() { friend = null; setState('title'); }
+
+function addFloat(x, y, s) { floats.push({ x, y, s, t: 0 }); }
+
+// ---------------- física ----------------
+function moveX(e) {
+  e.x += e.vx;
+  for (const s of solids) {
+    if (ov(e, s)) {
+      if (e.vx > 0) e.x = s.x - e.w;
+      else if (e.vx < 0) e.x = s.x + s.w;
+      e.vx = 0;
+    }
+  }
+}
+function moveY(e) {
+  e.y += e.vy; e.onG = false;
+  for (const s of solids) {
+    if (ov(e, s)) {
+      if (e.vy > 0) { e.y = s.y - e.h; e.vy = 0; e.onG = true; }
+      else if (e.vy < 0) {
+        e.y = s.y + s.h; e.vy = 0;
+        if (s.kind === 'q' && !s.used) hitBlock(s);
+      }
+    }
+  }
+}
+function hitBlock(s) {
+  s.used = true; s.bump = 8;
+  pops.push({ x: s.x, y: s.y - 14, t: 0 });
+  addFloat(s.x - 2, s.y - 18, '+100');
+  coinCount++; score += 100; beep(988, 0.08);
+}
+function die() {
+  if (state !== 'play') return;
+  setState('dead');
+  hero.vy = -6.5; hero.vx = 0; hero.onG = false;
+  buzz(); beep(160, 0.35, 'sawtooth', 0.05); vibrate([200]);
+}
+
+// avança o ciclo de passos conforme a velocidade
+function animate(c) {
+  if (c.onG) c.walkT += Math.abs(c.vx) * 0.35;
+}
+
+// ---------------- inimigos ----------------
+function updateEnemies() {
+  enemies = enemies.filter(e => !(e.dead && e.dt > 40));
+  for (const e of enemies) {
+    e.anim++;
+    if (e.dead) {
+      e.dt++;
+      if (e.flyer) { e.vy += 0.3; e.y += e.vy; }
+      continue;
+    }
+    if (e.flyer) {
+      e.t++;
+      e.x += e.dir * e.spd;
+      if (e.x < e.minX) { e.x = e.minX; e.dir = 1; }
+      if (e.x > e.maxX) { e.x = e.maxX; e.dir = -1; }
+      e.y = e.base + Math.sin(e.t / 14) * 10;
+      continue;
+    }
+    e.vy = Math.min(e.vy + 0.5, 6);
+    e.x += e.dir * e.spd;
+    for (const s of solids) {
+      if (ov(e, s)) { e.x -= e.dir * e.spd; e.dir *= -1; break; }
+    }
+    e.y += e.vy; e.onG = false;
+    for (const s of solids) {
+      if (ov(e, s)) {
+        if (e.vy > 0) { e.y = s.y - e.h; e.vy = 0; e.onG = true; }
+        else if (e.vy < 0) { e.y = s.y + s.h; e.vy = 0; }
+      }
+    }
+    if (e.onG) {
+      const px = e.dir > 0 ? e.x + e.w + 1 : e.x - 2;
+      if (!solidAt(px, e.y + e.h + 2)) e.dir *= -1; // não cai da borda
+    }
+  }
+}
+
+// ---------------- atualização ----------------
+function introVib() { if (T < 70) return T / 70; if (T < 170) return 1; return Math.max(0, 1 - (T - 170) / 70); }
+function introZoom() {
+  if (T < 70) return 1 + 2 * easeOut(T / 70);
+  if (T < 170) return 3;
+  return 3 - 2 * easeIO(Math.min(1, (T - 170) / 70));
+}
+
+function updateIntro() {
+  hero.vib = introVib();
+  if (T === 100) { vibrate([200, 100, 200]); buzz(); }
+  if (T >= INTRO_LEN) { setState('play'); bannerText = 'FASE 1 - A CASA'; banner = 150; hero.vib = 0; }
+}
+
+function updatePlay() {
+  const h = hero;
+  if (++timeTick >= 24) { timeTick = 0; time--; if (time <= 0) { die(); return; } }
+
+  const dir = (input.left ? -1 : 0) + (input.right ? 1 : 0);
+  const maxV = input.run ? 2.4 : 1.3;
+  if (dir) { h.vx += dir * 0.14; if (Math.abs(h.vx) > maxV) h.vx = dir * maxV; h.face = dir; }
+  else { h.vx *= 0.8; if (Math.abs(h.vx) < 0.05) h.vx = 0; }
+
+  if (input.jumpPressed && h.onG) { h.vy = -6.2; h.onG = false; beep(520, 0.15); }
+  h.vy = Math.min(h.vy + ((input.jumpHeld && h.vy < 0) ? 0.36 : 0.8), 7);
+
+  moveX(h); moveY(h);
+  animate(h);
+  h.vib = Math.max(0, h.vib - 0.03);
+  if (h.y > GROUND + 80) { die(); return; }
+
+  for (const c of coins) {
+    if (!c.got && ov(h, { x: c.x, y: c.y, w: 8, h: 8 })) {
+      c.got = true; coinCount++; score += 100; beep(988, 0.08); beep(1319, 0.1);
+      addFloat(c.x - 2, c.y - 4, '+100');
+    }
+  }
+
+  for (const cp of checkpoints) {
+    if (!cp.on && h.x > cp.x) {
+      cp.on = true; respawn = { x: cp.x + 2, y: GROUND - HERO_H };
+      h.vib = 0.8; vibrate(80); beep(880, 0.2, 'triangle', 0.08);
+    }
+  }
+
+  updateEnemies();
+  for (const e of enemies) {
+    if (e.dead || !ov(h, e)) continue;
+    if (h.vy > 0 && h.y + h.h - e.y <= 8) {
+      e.dead = true; e.dt = 0; e.flat = !e.flyer;
+      h.vy = -5; score += 100; beep(260, 0.1, 'square', 0.05);
+      addFloat(e.x, e.y - 6, '+100');
+    } else { die(); return; }
+  }
+
+  if (h.x > door.x - 60) { endPhase = 0; setState('end'); }
+}
+
+// cena final: o herói chega à porta, ela abre, um amigo sai e os dois se cumprimentam
+function updateEnd() {
+  const h = hero;
+  h.vib = Math.max(0, h.vib - 0.02);
+  if (endPhase === 0) {
+    h.face = 1; h.vx = 0.7;
+    h.vy = Math.min(h.vy + 0.8, 7);
+    moveX(h); moveY(h); animate(h);
+    if (h.x >= 3400) { h.vx = 0; endPhase = 1; T = 0; }
+  } else if (endPhase === 1) {
+    h.vx = 0; animate(h);
+    door.open = Math.min(1, door.open + 1 / 45);
+    if (door.open >= 1) { endPhase = 2; T = 0; friend = makeFriend(door.x + 10, GROUND - HERO_H); }
+  } else if (endPhase === 2) {
+    friend.vx = -0.9; friend.face = -1;
+    friend.x += friend.vx;
+    animate(friend);
+    if (friend.x <= 3424) {
+      friend.vx = 0; friend.walkT = 0; friend.wave = true;
+      h.wave = true; h.vib = 0.6;
+      endPhase = 3; T = 0;
+      vibrate([120, 60, 120, 60, 200]); buzz();
+    }
+  } else if (endPhase === 3) {
+    h.vib = 0.4 + 0.2 * Math.abs(Math.sin(gt * 0.2));
+    if (T > 150) setState('win');
+  }
+}
+
+function updateDead() {
+  const h = hero;
+  h.vy = Math.min(h.vy + 0.5, 8); h.y += h.vy;
+  if (T > 120) {
+    lives--;
+    if (lives < 0) { setState('gameover'); return; }
+    resetLevelObjects();
+    hero = makeHero(respawn.x, respawn.y); hero.onG = true;
+    setState('play');
+    bannerText = 'VIDAS: ' + lives; banner = 90;
+  }
+}
+
+function update() {
+  gt++; T++;
+  switch (state) {
+    case 'title':
+      titleHero.vx = 0.9; titleHero.face = 1; titleHero.x += 0.9; animate(titleHero);
+      if (titleHero.x > W + 24) titleHero.x = -28;
+      if (input.start) startGame();
+      break;
+    case 'intro': updateIntro(); break;
+    case 'play': updatePlay(); break;
+    case 'end': updateEnd(); break;
+    case 'dead': updateDead(); break;
+    case 'win': if (input.start && T > 30) goTitle(); break;
+    case 'gameover': if (T > 240) goTitle(); break;
+  }
+  for (const s of solids) if (s.bump > 0) s.bump--;
+  pops.forEach(p => p.t++);
+  pops = pops.filter(p => p.t < 30);
+  floats.forEach(f => f.t++);
+  floats = floats.filter(f => f.t < 40);
+  if (banner > 0) banner--;
+  input.start = false; input.jumpPressed = false;
+}
+
+// ---------------- câmera ----------------
+function camera() {
+  if (state === 'intro') {
+    const z = introZoom();
+    const v = introVib();
+    const sx = v > 0 ? (Math.random() - 0.5) * 2 * v * 1.2 : 0;
+    const sy = v > 0 ? (Math.random() - 0.5) * 2 * v * 1.2 : 0;
+    return { x: hero.x + 6 - W / (2 * z) + sx, y: hero.y + 11 - H / (2 * z) + sy, z };
+  }
+  let x = hero.x + 6 - W / 2;
+  x = Math.max(0, Math.min(LEVEL_W - W, x));
+  return { x, y: 0, z: 1 };
+}
+
+// ---------------- cenário da casa ----------------
+function drawRoom(c) {
+  const vw = W / c.z, vh = H / c.z, x0 = c.x, y0 = c.y;
+  ctx.fillStyle = PAT.wall;
+  ctx.fillRect(x0, y0, vw, GROUND - y0);
+  ctx.fillStyle = '#3d2615';
+  ctx.fillRect(x0, GROUND, vw, vh);
+  ctx.fillStyle = PAT.skirt;
+  ctx.fillRect(x0, GROUND - 10, vw, 10);
+  ctx.fillStyle = 'rgba(60,30,10,.12)';
+  ctx.fillRect(x0, y0, vw, 26);
+}
+
+function windowDeco(x, y) {
+  panel(x - 4, y - 4, 48, 56, '#7a4a22');
+  R(x, y, 40, 46, '#7fd0ff');
+  R(x, y, 40, 10, '#9fe0ff');
+  blob(x + 12, y + 14, 6, 3, '#ffffff', '#b8e4f8');
+  blob(x + 28, y + 30, 5, 3, '#ffffff', '#b8e4f8');
+  R(x + 19, y, 2, 46, '#f3e3c0');
+  R(x, y + 22, 40, 2, '#f3e3c0');
+  for (const cx of [x - 6, x + 38]) {
+    R(cx, y - 6, 9, 60, '#d94848');
+    R(cx + 2, y - 6, 1, 60, '#b03030');
+    R(cx + 6, y - 6, 1, 60, '#b03030');
+    R(cx, y - 6, 9, 2, '#f08a6a');
+  }
+  R(x - 8, y + 50, 56, 4, '#8a5428');
+}
+function pic(x, y, w, h) {
+  panel(x - 3, y - 3, w + 6, h + 6, '#6b3f1d');
+  R(x, y, w, h, '#bfe3f5');
+  blob(x + w * 0.7, y + h * 0.35, 3, 3, '#ffe27a', '#e0a040');
+  ctx.fillStyle = '#5a9d4c';
+  ctx.beginPath(); ctx.moveTo(x, y + h); ctx.lineTo(x + w * 0.4, y + h * 0.5); ctx.lineTo(x + w, y + h); ctx.fill();
+}
+function books(x0, x1, y) {
+  const cols = ['#e74c3c', '#2ecc71', '#3498db', '#f1c40f', '#9b59b6', '#ecf0f1'];
+  for (let x = x0, i = 0; x < x1; x += 9, i++) {
+    const hgt = 10 + (i % 3) * 2;
+    panel(x, y - hgt, 7, hgt, cols[i % cols.length]);
+  }
+}
+
+function drawSolids() {
+  for (const s of solids) {
+    const { x, y, w, h, kind } = s;
+    if (kind === 'floor') {
+      ctx.fillStyle = PAT.floor; ctx.fillRect(x, y, w, h);
+      R(x, y + h - 1, w, 1, '#4a2a12');
+    } else if (kind === 'sofa') {
+      panel(x - 4, y - 10, 10, h + 10, '#2f63b0');
+      panel(x + w - 6, y - 10, 10, h + 10, '#2f63b0');
+      panel(x, y, w, h, '#3d7fd6');
+      panel(x + 6, y + 4, w / 2 - 9, h - 9, '#5b96e8');
+      panel(x + w / 2 + 3, y + 4, w / 2 - 9, h - 9, '#5b96e8');
+    } else if (kind === 'table') {
+      panel(x, y, w, h, '#c9803e');
+      R(x + 4, y + h - 1, 2, 1, '#8a4f22');
+    } else if (kind === 'shelf') {
+      panel(x, y, w, h, '#9a6230');
+      R(x + 6, y + h, 3, 5, '#6d3f1b'); R(x + w - 9, y + h, 3, 5, '#6d3f1b');
+    } else if (kind === 'box') {
+      panel(x, y, w, h, '#c8934f');
+      R(x + Math.floor(w / 2) - 2, y + 1, 4, h - 2, '#efdc9a');
+      R(x + 2, y + 3, 4, 2, '#fff3d0');
+    } else if (kind === 'stool') {
+      panel(x, y, w, 6, '#b06c34');
+      R(x + 3, y + 6, 3, h - 6, '#6d3f1b'); R(x + w - 6, y + 6, 3, h - 6, '#6d3f1b');
+    } else if (kind === 'cab') {
+      panel(x, y, w, h, '#a2662f');
+      panel(x + 4, y + 5, w / 2 - 6, h - 10, '#b87a3c');
+      panel(x + w / 2 + 2, y + 5, w / 2 - 6, h - 10, '#b87a3c');
+      R(x + w / 2 - 5, y + h / 2 - 3, 2, 6, '#f5d76e');
+      R(x + w / 2 + 3, y + h / 2 - 3, 2, 6, '#f5d76e');
+      R(x, y + h - 4, w, 4, '#6d3f1b');
+    } else if (kind === 'bed') {
+      panel(x, y + h - 12, w, 12, '#7a4a22');
+      panel(x, y, w, h - 12, '#f4f1e6');
+      panel(x + 22, y + 8, w - 22, h - 20, '#d64545');
+      panel(x + 6, y + 3, 18, 7, '#ffffff');
+    } else if (kind === 'q') {
+      const dy = s.bump > 0 ? -2 : 0;
+      ctx.drawImage(s.used ? SPR_QUSED : SPR_QBLOCK, x, y + dy);
+    }
+  }
+}
+
+function drawDecor() {
+  for (const x of [150, 640, 1120, 1560, 2420, 2880, 3240]) windowDeco(x, 46);
+  pic(330, 40, 22, 16); pic(1380, 44, 22, 18); pic(2080, 40, 20, 16); pic(3000, 46, 18, 14);
+
+  blob(1850, 58, 9, 9, '#fff8e8', '#6b3f1d');
+  ctx.strokeStyle = '#333'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(1850, 58); ctx.lineTo(1850, 52); ctx.moveTo(1850, 58); ctx.lineTo(1855, 60); ctx.stroke();
+
+  panel(420, 132, 120, 28, '#2f63b0');
+  R(428, 136, 104, 1, '#6fa6ee');
+  R(704, 156, 4, 36, '#8a4f22'); R(772, 156, 4, 36, '#8a4f22');
+  R(3004, 166, 4, 26, '#8a4f22'); R(3052, 166, 4, 26, '#8a4f22');
+  panel(1792, 132, 10, 60, '#7a4a22');
+  books(1004, 1072, 120); books(2706, 2772, 136); books(3204, 3276, 130);
+
+  panel(2874, GROUND - 12, 14, 12, '#c0562b');
+  ctx.fillStyle = '#2e9e3e';
+  ctx.beginPath(); ctx.ellipse(2881, GROUND - 20, 8, 6, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#4cc24c';
+  ctx.beginPath(); ctx.ellipse(2875, GROUND - 26, 5, 4, -0.4, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(2888, GROUND - 25, 4, 3, 0.5, 0, Math.PI * 2); ctx.fill();
+
+  R(1290, GROUND - 3, 160, 4, '#8a2a36');
+  R(1292, GROUND - 3, 156, 2, '#d64545');
+  R(1296, GROUND - 3, 148, 1, '#f5d76e');
+
+  R(560, GROUND - 56, 2, 56, '#555');
+  ctx.fillStyle = '#f5d76e';
+  ctx.beginPath(); ctx.moveTo(552, GROUND - 56); ctx.lineTo(568, GROUND - 56); ctx.lineTo(564, GROUND - 66); ctx.lineTo(556, GROUND - 66); ctx.fill();
+  ctx.fillStyle = 'rgba(255,240,170,.12)';
+  ctx.beginPath(); ctx.moveTo(556, GROUND - 56); ctx.lineTo(564, GROUND - 56); ctx.lineTo(590, GROUND); ctx.lineTo(530, GROUND); ctx.fill();
+}
+
+function drawCheckpoints() {
+  for (const cp of checkpoints) {
+    R(cp.x, GROUND - 40, 3, 40, '#6b6b78');
+    R(cp.x, GROUND - 40, 1, 40, '#9a9aaa');
+    blob(cp.x + 1, GROUND - 41, 2, 2, '#ffe27a', '#8a6b00');
+    const wave = Math.sin(gt / 8) * 1.5;
+    ctx.fillStyle = cp.on ? '#2ecc40' : '#e74c3c';
+    ctx.beginPath();
+    ctx.moveTo(cp.x + 3, GROUND - 39);
+    ctx.quadraticCurveTo(cp.x + 9, GROUND - 40 + wave, cp.x + 15, GROUND - 36 + wave);
+    ctx.lineTo(cp.x + 3, GROUND - 31);
+    ctx.closePath(); ctx.fill();
+  }
+}
+
+function drawDoor() {
+  const d = door;
+  panel(d.x - 5, d.y - 7, d.w + 10, d.h + 7, '#5a3317');
+  R(d.x, d.y, d.w, d.h, '#fff7c2');
+  const pw = Math.round(d.w * (1 - d.open));
+  if (pw > 0) {
+    panel(d.x, d.y, pw, d.h, '#b5752f');
+    panel(d.x + 4, d.y + 6, Math.max(2, pw - 8), 20, '#c98a45');
+    panel(d.x + 4, d.y + 32, Math.max(2, pw - 8), 24, '#c98a45');
+    if (pw > 12) blob(d.x + d.w - 9, d.y + d.h / 2, 2, 2, '#f5d76e', '#8a6b00');
+  }
+}
+
+function drawCoin(x, y, t) {
+  const w = Math.max(2, Math.round(8 * Math.abs(Math.cos(t / 10))));
+  blit(SPR_COIN, x + (8 - w) / 2, y, false, w, 8);
+}
+
+// ---------------- personagens ----------------
+// Ângulos "a" > 0 apontam a parte para a frente (direção do rosto).
+function poseOf(c) {
+  const sp = Math.abs(c.vx || 0);
+  const t = c.walkT || 0;
+  let p = { legF: 0, legB: 0, armF: 0.12, armB: -0.12, bob: Math.sin(gt * 0.07) * 0.4 };
+  if (!c.onG) {
+    p = (c.vy || 0) < 0
+      ? { legF: 0.9, legB: -0.4, armF: 2.5, armB: 2.0, bob: 0 }   // subindo
+      : { legF: 0.25, legB: -0.25, armF: 1.9, armB: 1.5, bob: 0 }; // caindo
+  } else if (sp > 0.05) {
+    const amp = Math.min(0.95, sp * 0.42);
+    const s = Math.sin(t);
+    p = {
+      legF: s * amp, legB: -s * amp,
+      armF: -s * amp * 1.1, armB: s * amp * 1.1,
+      bob: -Math.abs(Math.cos(t)) * (sp > 1.5 ? 1.2 : 0.6)
+    };
+  }
+  if (c.wave) { p.armF = 2.6 + Math.sin(gt * 0.35) * 0.5; p.armB = 0.2; }
+  if (c.vib > 0.05) p.armF = p.armF * (1 - c.vib) + 2.2 * c.vib; // levanta o braço para mostrar a pulseira
+  return p;
+}
+
+// desenha um personagem com rig (conjunto de sprites) e pose animada
+function drawChar(c, rig) {
+  const bx = Math.round(c.x), by = Math.round(c.y);
+  const p = poseOf(c);
+  const oy = Math.round(p.bob);
+
+  ctx.save();
+  ctx.translate(bx + 6, 0);
+  ctx.scale(c.face < 0 ? -1 : 1, 1);
+  ctx.translate(-(bx + 6), 0);
+
+  // braço de trás
+  ctx.save(); ctx.translate(bx + 3, by + 10 + oy); ctx.rotate(-p.armB);
+  ctx.drawImage(rig.armB, -2 - rig.armB.ox, -rig.armB.oy); ctx.restore();
+  // perna de trás
+  ctx.save(); ctx.translate(bx + 4, by + 16 + oy); ctx.rotate(-p.legB);
+  ctx.drawImage(rig.legB, -2 - rig.legB.ox, -rig.legB.oy); ctx.restore();
+
+  // cabelo atrás, tronco e cabeça
+  drawPart(rig.hairBack, bx + 1, by + 3 + oy);
+  drawPart(rig.torso, bx + 2, by + 9 + oy);
+  drawPart(rig.head, bx, by + oy);
+
+  // perna da frente
+  ctx.save(); ctx.translate(bx + 7, by + 16 + oy); ctx.rotate(-p.legF);
+  ctx.drawImage(rig.leg, -2 - rig.leg.ox, -rig.leg.oy); ctx.restore();
+
+  // braço da frente com a PULSEIRA (desenhado no sistema do braço, então acompanha o movimento)
+  ctx.save(); ctx.translate(bx + 9, by + 10 + oy); ctx.rotate(-p.armF);
+  ctx.drawImage(rig.arm, -2 - rig.arm.ox, -rig.arm.oy);
+  if (c.vib > 0.05) drawWristband(c.vib);
+  ctx.restore();
+
+  ctx.restore();
+}
+
+// pulseira vibrando, em coordenadas locais do braço (faixa nas linhas 5-6 do braço)
+function drawWristband(vib) {
+  const bandX = -2, bandY = 5;
+  const shake = Math.round(Math.sin(gt * 2.3) * vib * 1.5);
+  // brilho pulsando em volta do pulso
+  ctx.globalAlpha = (0.3 + 0.4 * Math.abs(Math.sin(gt * 0.4))) * vib;
+  ctx.fillStyle = '#fff176';
+  ctx.beginPath(); ctx.ellipse(bandX + 2, bandY + 1, 6, 5, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.globalAlpha = 1;
+  // a faixa treme e alterna o brilho
+  ctx.fillStyle = gt % 4 < 2 ? '#fff176' : '#ffd400';
+  ctx.fillRect(bandX + shake, bandY, 4, 2);
+  ctx.fillStyle = '#8a6b00';
+  ctx.fillRect(bandX + shake, bandY + 2, 4, 1);
+  // ondas de vibração saindo dos dois lados
+  ctx.strokeStyle = '#7fe7ff'; ctx.lineWidth = 1;
+  for (let i = 0; i < 2; i++) {
+    if ((gt + i * 3) % 6 < 4) {
+      const r = 8 + i * 3;
+      ctx.beginPath(); ctx.arc(bandX + 2, bandY + 1, r, -0.6, 0.6); ctx.stroke();
+      ctx.beginPath(); ctx.arc(bandX + 2, bandY + 1, r, Math.PI - 0.6, Math.PI + 0.6); ctx.stroke();
+    }
+  }
+}
+
+function drawBlobEnemy(e, img) {
+  blit(img, e.x + e.w / 2 - 8, e.y + e.h - img.foot, e.dir < 0);
+}
+
+function drawEnemy(e) {
+  if (e.type === 'barata') {
+    const img = e.dead && e.flat ? SPR_BARATA.flat : (Math.floor(e.anim / 6) % 2 ? SPR_BARATA.walk1 : SPR_BARATA.walk2);
+    drawBlobEnemy(e, img);
+  } else if (e.type === 'rato') {
+    const img = e.dead && e.flat ? SPR_RATO.flat : (Math.floor(e.anim / 5) % 2 ? SPR_RATO.walk1 : SPR_RATO.walk2);
+    drawBlobEnemy(e, img);
+  } else {
+    const img = Math.floor(e.anim / 3) % 2 ? SPR_MOSCA.up : SPR_MOSCA.down;
+    blit(img, e.x + e.w / 2 - 8, e.y + e.h / 2 - 9, e.dir < 0);
+  }
+}
+
+// balão de fala acima de um personagem
+function bubble(cx, top, s) {
+  ctx.font = FONT(7);
+  const w = Math.ceil(ctx.measureText(s).width) + 8;
+  const x = Math.round(cx - w / 2), y = Math.round(top - 12);
+  R(x - 1, y - 1, w + 2, 11, '#1d1030');
+  R(x, y, w, 9, '#ffffff');
+  R(Math.round(cx) - 2, y + 9, 4, 2, '#1d1030');
+  R(Math.round(cx) - 1, y + 9, 2, 1, '#ffffff');
+  text(s, cx, y + 1, { a: 'center', c: '#1d1030', size: 7 });
+}
+
+// ---------------- desenho de tela ----------------
+function drawTitle() {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  // céu
+  const g = ctx.createLinearGradient(0, 0, 0, GROUND);
+  g.addColorStop(0, '#9fdcf2'); g.addColorStop(1, '#e6f8ff');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+
+  const cloud = (x, y, s) => {
+    blob(x, y, 10 * s, 7 * s, '#ffffff', '#9fcde0');
+    blob(x + 12 * s, y - 4 * s, 12 * s, 10 * s, '#ffffff', '#9fcde0');
+    blob(x + 26 * s, y, 10 * s, 7 * s, '#ffffff', '#9fcde0');
+  };
+  cloud(((30 + gt * 0.15) % (W + 80)) - 40, 30, 1);
+  cloud(((170 + gt * 0.1) % (W + 80)) - 40, 48, 0.7);
+
+  // árvores ao fundo
+  for (const [tx, s] of [[10, 1], [246, 1.1]]) {
+    R(tx - 2, GROUND - 22, 4, 22, '#7a4a22');
+    blob(tx, GROUND - 30, 14 * s, 14 * s, '#3fae55', '#1d5a2a');
+    blob(tx - 6, GROUND - 24, 7 * s, 7 * s, '#4cc266', '#1d5a2a');
+  }
+
+  // prédio da escola
+  const BX = 26, BY = 112, BW = 204;
+  panel(BX, BY, BW, GROUND - BY, '#2c6e8c');
+  R(BX + 2, BY + 2, BW - 4, 5, '#ffffff');              // faixa branca no topo
+  R(BX + 2, BY + 7, BW - 4, 2, '#f7931e');             // faixa laranja
+  // placa ETERJ
+  panel(BX + 60, BY + 11, 84, 11, '#f7931e');
+  text('ETERJ', BX + 102, BY + 12, { a: 'center', c: '#ffffff', size: 8 });
+  // janelas em duas linhas
+  for (let r = 0; r < 2; r++) {
+    for (let c = 0; c < 6; c++) {
+      const wx = BX + 10 + c * 31, wy = BY + 30 + r * 24;
+      if (wx + 20 > BX + BW) continue;
+      panel(wx, wy, 20, 16, '#e8f7fc');
+      R(wx + 9, wy + 1, 2, 14, '#2c6e8c');
+      R(wx + 1, wy + 7, 18, 2, '#2c6e8c');
+      R(wx + 2, wy + 2, 6, 3, '#bfe9f8');
+    }
+  }
+  // porta central
+  panel(BX + BW / 2 - 14, GROUND - 30, 28, 30, '#ffffff');
+  panel(BX + BW / 2 - 11, GROUND - 27, 22, 27, '#1f5870');
+  R(BX + BW / 2 + 5, GROUND - 14, 2, 2, '#f7931e');
+
+  // bandeira laranja
+  R(232, GROUND - 74, 2, 74, '#8a8a96');
+  ctx.fillStyle = '#f7931e';
+  ctx.beginPath(); ctx.moveTo(234, GROUND - 74); ctx.lineTo(250, GROUND - 68 + Math.sin(gt / 9) * 2);
+  ctx.lineTo(234, GROUND - 60); ctx.closePath(); ctx.fill();
+
+  // pátio: grama e piso
+  R(0, GROUND, W, 5, '#4cc24c');
+  R(0, GROUND + 5, W, 1, '#2a8a2e');
+  ctx.fillStyle = '#d9d4c5'; ctx.fillRect(0, GROUND + 6, W, H - GROUND - 6);
+  for (let x = 0; x < W; x += 16) R(x, GROUND + 6, 1, H - GROUND - 6, '#bdb6a2');
+  R(0, GROUND + 22, W, 1, '#bdb6a2');
+
+  // logo VIBEELL nas cores da ETERJ
+  const word = 'VIBEELL';
+  const cols = ['#ffffff', '#f7931e', '#2c6e8c', '#f5a623', '#ffffff', '#f7931e', '#2c6e8c'];
+  ctx.font = FONTB(32);
+  const ws = [...word].map(ch => ctx.measureText(ch).width);
+  const total = ws.reduce((a, b) => a + b, 0);
+  let lx = (W - total) / 2;
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  [...word].forEach((ch, i) => {
+    ctx.lineJoin = 'round'; ctx.lineWidth = 7; ctx.strokeStyle = '#143a52';
+    ctx.fillStyle = '#143a52';
+    ctx.strokeText(ch, lx + 2, 78); ctx.fillText(ch, lx + 2, 78);
+    ctx.fillStyle = cols[i % cols.length];
+    ctx.strokeText(ch, lx, 75); ctx.fillText(ch, lx, 75);
+    lx += ws[i];
+  });
+  outlined('CAMPAINHA VIBRATÓRIA', W / 2, 97, 10, '#ffffff', '#143a52', 3);
+
+  // menu: caixa laranja com JOGAR
+  const blink = Math.floor(gt / 30) % 2 === 0;
+  // texto simples, sem caixa, com a cabeça do herói como cursor (como no título original)
+  outlined('JOGAR', W / 2, 152, 12, '#ffffff', '#143a52', 4);
+  drawPart(RIG_HERO.head, W / 2 - 60, 143);
+  if (blink) {
+    R(0, 160, W, 12, 'rgba(20,58,82,.75)');
+    text('ENTER / TOQUE PARA JOGAR', W / 2, 162, { a: 'center', size: 7, c: '#ffffff' });
+  }
+  text('SETAS: MOVER  Z/ESPAÇO: PULAR  X: CORRER', W / 2, 186, { a: 'center', size: 6, c: '#143a52' });
+  text('FEITO PARA A FECIP · ETERJ', W / 2, 204, { a: 'center', size: 7, c: '#143a52' });
+  text('© 2026 VIBEELL', W / 2, 214, { a: 'center', size: 6, c: '#143a52' });
+
+  // jogador andando pela escola, com a pulseira vibrando de vez em quando
+  titleHero.vib = gt % 150 < 25 ? 0.6 : 0;
+  drawChar(titleHero, RIG_HERO);
+}
+
+function drawHUD() {
+  text('VIBEELL', 8, 6, { c: '#ff6a55' });
+  drawPart(RIG_HERO.head, 6, 14);
+  text('x ' + lives, 22, 17);
+  text('PONTOS', 84, 6);
+  text(String(score).padStart(6, '0'), 84, 16);
+  text('MOEDAS', 150, 6);
+  blit(SPR_COIN, 150, 16, false, 8, 8);
+  text(String(coinCount).padStart(2, '0'), 162, 16, { c: '#ffd23f' });
+  text('TEMPO', 206, 6);
+  text(String(time).padStart(3, '0'), 206, 16, { c: '#ffe27a' });
+}
+
+function camAndWorld() {
+  const c = camera();
+  ctx.setTransform(c.z, 0, 0, c.z, -c.x * c.z, -c.y * c.z);
+  drawRoom(c);
+  drawSolids();
+  drawDecor();
+  drawCheckpoints();
+  drawDoor();
+  for (const co of coins) if (!co.got) drawCoin(co.x, co.y, gt);
+  for (const p of pops) drawCoin(p.x, p.y - p.t * 1.2, gt + p.t);
+  for (const e of enemies) drawEnemy(e);
+  if (friend) drawChar(friend, RIG_FRIEND);
+  if (!hero.hidden) drawChar(hero, RIG_HERO);
+  if (state === 'end' && endPhase === 3 && T > 5 && T < 140) {
+    bubble(hero.x + 6, hero.y - 2, 'OI, AMIGO!');
+    bubble(friend.x + 6, friend.y - 2, 'OI!');
+  }
+  for (const f of floats) text(f.s, f.x, f.y - f.t * 0.6, { a: 'center', c: '#fff6a0', size: 7 });
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+}
+
+function render() {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  if (state === 'title') { drawTitle(); return; }
+
+  camAndWorld();
+  if (state !== 'intro') drawHUD();
+
+  if (state === 'intro' && T < 170) {
+    text('A CAMPAINHA ESTÁ VIBRANDO!', W / 2 + (Math.random() - 0.5) * 2, 22, { a: 'center', c: '#ffe27a' });
+  }
+  if (banner > 0 && (state === 'play' || state === 'end')) {
+    R(0, 100, W, 18, 'rgba(0,0,0,.6)');
+    text(bannerText, W / 2, 104, { a: 'center', size: 9 });
+  }
+  if (state === 'win') {
+    R(0, 72, W, 80, 'rgba(0,0,0,.7)');
+    text('FASE CONCLUÍDA!', W / 2, 88, { a: 'center', c: '#ffe27a', size: 12 });
+    text('PONTOS: ' + score, W / 2, 112, { a: 'center', size: 9 });
+    if (Math.floor(gt / 30) % 2 === 0) text('ENTER: VOLTAR AO MENU', W / 2, 132, { a: 'center', size: 8 });
+  }
+  if (state === 'gameover') {
+    R(0, 80, W, 60, 'rgba(0,0,0,.7)');
+    text('FIM DE JOGO', W / 2, 100, { a: 'center', c: '#ff6a55', size: 12 });
+  }
+}
+
+// ---------------- laço principal (60 fps fixos) ----------------
+let last = performance.now(), acc = 0;
+const STEP = 1000 / 60;
+function loop(now) {
+  acc += Math.min(100, now - last);
+  last = now;
+  while (acc >= STEP) { update(); acc -= STEP; }
+  render();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
